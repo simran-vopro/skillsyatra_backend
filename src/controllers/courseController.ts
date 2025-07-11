@@ -209,7 +209,7 @@ const deleteCourse = async (req: Request, res: Response, next: NextFunction) => 
   }
 };
 
-// get course details by id
+// get course details by id for admin
 const getCourse = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
@@ -241,6 +241,91 @@ const getCourse = async (req: Request, res: Response, next: NextFunction) => {
       {
         $unwind: "$instructor"
       },
+    ]);
+
+    if (!course.length) {
+      return res.status(404).json({ message: "Course not found" });
+    }
+
+    res.json({ data: course[0] }); // return the single course object
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+// get course details by id
+const getBeforeCourseDetails = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+
+    const course = await Course.aggregate([
+      { $match: { _id: new mongoose.Types.ObjectId(id), status: true } },
+      {
+        $lookup: {
+          from: "categories",
+          localField: "category",
+          foreignField: "_id",
+          as: "category"
+        }
+      },
+      {
+        $unwind: "$category"
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "instructor",
+          foreignField: "_id",
+          as: "instructor"
+        }
+      },
+      {
+        $unwind: "$instructor"
+      },
+      {
+        $project: {
+          title: 1,
+          description: 1,
+          language: 1,
+          thumbnail: 1,
+          promoVideo: 1,
+          pricingType: 1,
+          pricing: 1,
+          whatYouLearn: 1,
+          courseInclude: 1,
+          audience: 1,
+          requirements: 1,
+          category: {
+            _id: 1,
+            name: 1,
+            image: 1
+          },
+          instructor: {
+            _id: 1,
+            firstName: 1,
+            email: 1
+          },
+          modules: {
+            $map: {
+              input: "$modules",
+              as: "mod",
+              in: {
+                name: "$$mod.name",
+                chapters: {
+                  $map: {
+                    input: "$$mod.chapters",
+                    as: "chap",
+                    in: {
+                      title: "$$chap.title"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     ]);
 
     if (!course.length) {
@@ -387,7 +472,8 @@ export default {
   deleteCourse,
   getCourse,
   updateVisisbility,
-  editCourse
+  editCourse,
+  getBeforeCourseDetails
 };
 
 // exports.getProducts = async (req, res, next) => {
