@@ -1,0 +1,134 @@
+import request from 'supertest';
+import mongoose from 'mongoose';
+import dotenv from 'dotenv';
+import app from '../../app';
+const jwt = require("jsonwebtoken");
+
+// Load environment variables
+dotenv.config();
+
+// Sample course body
+const sampleCourse = {
+    createdBy: "admin",
+    title: "Test Course",
+    thumbnail: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQEzp3_bSDLMDsJvjgPIU8YYFBeSU9sDBnKRg&s",
+    promoVideo: "file:///C:/Users/Admin/Downloads/13619613_1920_1080_25fps.mp4",
+    description: "A test course",
+    language: "English",
+    pricingType: "paid",
+    pricing: 100,
+    category: { name: "Test Category" },
+    instructor: {
+        email: "sktech@vopro.in",
+        password: "Simran@123#",
+        phone: "+911234567897",
+        firstName: "Simran",
+        lastName: "Kaur",
+        address: "1st floor, abs building",
+        city: "Phagwara"
+    },
+    whatYouLearn: "<p>Learn X</p>",
+    courseInclude: "<ul><li>Video</li></ul>",
+    audience: "<p>Beginners</p>",
+    requirements: "<p>None</p>",
+    modules: [
+        {
+            name: "Module 1",
+            chapters: [
+                {
+                    title: "Chapter 1",
+                    description: "Chapter 1 description",
+                    videoUrl: "file:///C:/Users/Admin/Downloads/13619613_1920_1080_25fps.mp4",
+                    quiz: [
+                        {
+                            question: "quiz question 1",
+                            options: [{
+                                name: "option A"
+                            },
+                            {
+                                name: "option B"
+                            },
+                            {
+                                name: "option C"
+                            },
+                            {
+                                name: "option D"
+                            }],
+                            answer: "option B"
+                        },
+                        {
+                            question: "quiz question 2",
+                            options: [{
+                                name: "option A"
+                            },
+                            {
+                                name: "option B"
+                            },
+                            {
+                                name: "option C"
+                            },
+                            {
+                                name: "option D"
+                            }],
+                            answer: "option C"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+};
+
+describe('POST /api/course/add', () => {
+    let token: string;
+
+    beforeAll(async () => {
+        const mongoUri = process.env.MONGODB_URI;
+
+        if (!mongoUri) {
+            throw new Error("MONGODB_URI is not defined in environment variables.");
+        }
+        await mongoose.connect(mongoUri);
+
+        token = jwt.sign({
+            userId: "ADM001",
+            email: "vopro@example.com",
+            type: "admin",
+        }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    });
+
+    afterAll(async () => {
+        await mongoose.connection.dropDatabase();
+        await mongoose.disconnect();
+    });
+
+    it('should create a new course successfully', async () => {
+        const res = await request(app)
+            .post('/api/course/add')
+            .set('Authorization', `Bearer ${token}`)
+            .field('title', sampleCourse.title)
+            .field('description', sampleCourse.description)
+            .field('language', sampleCourse.language)
+            .field('pricingType', sampleCourse.pricingType)
+            .field('pricing', sampleCourse.pricing.toString())
+            .field('createdBy', sampleCourse.createdBy)
+            .field('category', JSON.stringify(sampleCourse.category))
+            .field('instructor', JSON.stringify(sampleCourse.instructor))
+            .field('whatYouLearn', sampleCourse.whatYouLearn)
+            .field('courseInclude', sampleCourse.courseInclude)
+            .field('audience', sampleCourse.audience)
+            .field('requirements', sampleCourse.requirements)
+            .field('modules', JSON.stringify(sampleCourse.modules))
+            .field('thumbnail', sampleCourse.thumbnail)
+            .field('promoVideo', sampleCourse.promoVideo);
+
+        console.log("🔥 RESPONSE STATUS:", res.status);
+        console.log("📦 RESPONSE BODY:", res.body);
+
+        expect(res.status).toBe(201);
+        expect(res.body).toHaveProperty('message', 'Course added successfully');
+    });
+
+
+});
+
