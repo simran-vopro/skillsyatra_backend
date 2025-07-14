@@ -197,6 +197,58 @@ const getCourses = async (req: Request, res: Response, next: NextFunction) => {
   }
 };
 
+
+const myCourses = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { search } = req.query;
+
+    const matchStage = search
+      ? {
+        $match: {
+          $or: [
+            isValidObjectId(search)
+              ? { category: new mongoose.Types.ObjectId(typeof search === 'string' ? search : '') } // match by category ID
+              : null,
+            { title: { $regex: search, $options: "i" } },
+            { description: { $regex: search, $options: "i" } }
+          ].filter(Boolean) // remove null if not ObjectId
+        }
+      }
+      : null;
+
+    const pipeline: any[] = [];
+
+    if (matchStage) pipeline.push(matchStage);
+
+    pipeline.push(
+      {
+        $lookup: {
+          from: "categories",
+          localField: "category",
+          foreignField: "_id",
+          as: "category"
+        }
+      },
+      { $unwind: "$category" },
+      {
+        $lookup: {
+          from: "users",
+          localField: "instructor",
+          foreignField: "_id",
+          as: "instructor"
+        }
+      },
+      { $unwind: "$instructor" }
+    );
+
+    const courses = await Course.aggregate(pipeline);
+
+    return res.status(200).json({ data: courses });
+  } catch (error: any) {
+    return res.status(500).json({ message: "error while getting courses" });
+  }
+};
+
 // Delete course
 const deleteCourse = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -326,6 +378,48 @@ const getBeforeCourseDetails = async (req: Request, res: Response, next: NextFun
           }
         }
       }
+    ]);
+
+    if (!course.length) {
+      return res.status(404).json({ message: "Course not found" });
+    }
+
+    res.json({ data: course[0] }); // return the single course object
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+// get course details by id
+const getFullCourseDetails = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+
+    const course = await Course.aggregate([
+      { $match: { _id: new mongoose.Types.ObjectId(id), status: true } },
+      {
+        $lookup: {
+          from: "categories",
+          localField: "category",
+          foreignField: "_id",
+          as: "category"
+        }
+      },
+      {
+        $unwind: "$category"
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "instructor",
+          foreignField: "_id",
+          as: "instructor"
+        }
+      },
+      {
+        $unwind: "$instructor"
+      },
     ]);
 
     if (!course.length) {
@@ -473,361 +567,7 @@ export default {
   getCourse,
   updateVisisbility,
   editCourse,
-  getBeforeCourseDetails
+  getBeforeCourseDetails,
+  getFullCourseDetails,
+  myCourses
 };
-
-// exports.getProducts = async (req, res, next) => {
-//   try {
-//     const {
-//       page = 1,
-//       limit = 50,
-//       search,
-//       category1,
-//       category2,
-//       category3,
-//       brand,
-//       topSelling
-//     } = req.query;
-
-//     const filter = { isActive: true };
-
-//     if (search) {
-//       const isNumber = !isNaN(Number(search));
-//       filter.$or = [
-//         { Style: { $regex: search, $options: "i" } },
-//         { Description: { $regex: search, $options: "i" } },
-//         { Code: { $regex: search, $options: "i" } },
-//         ...(isNumber ? [{ ISPCCombined: Number(search) }] : [])
-//       ];
-//     }
-
-//     if (topSelling === 'true') {
-//       filter.topSelling = true;
-//     }
-
-//     const toObjectIdArray = (param) => {
-//       if (!param) return undefined;
-
-//       // Already an array (e.g., ?category1=A&category1=B)
-//       if (Array.isArray(param)) {
-//         return { $in: param.map(id => new mongoose.Types.ObjectId(id)) };
-//       }
-
-//       // Try to parse JSON (e.g. '["A","B"]')
-//       try {
-//         const parsed = JSON.parse(param);
-//         if (Array.isArray(parsed)) {
-//           return { $in: parsed.map(id => new mongoose.Types.ObjectId(id)) };
-//         }
-//         return mongoose.Types.ObjectId(parsed); // single string
-//       } catch {
-//         // Fallback: comma-separated string
-//         const ids = param.split(',');
-//         return { $in: ids.map(id => new mongoose.Types.ObjectId(id)) };
-//       }
-//     };
-
-//     const parsedCategory1 = toObjectIdArray(category1);
-//     if (parsedCategory1) filter.Category1 = parsedCategory1;
-
-//     const parsedCategory2 = toObjectIdArray(category2);
-//     if (parsedCategory2) filter.Category2 = parsedCategory2;
-
-//     const parsedCategory3 = toObjectIdArray(category3);
-//     if (parsedCategory3) filter.Category3 = parsedCategory3;
-
-//     const parsedBrands = toObjectIdArray(brand);
-//     if (parsedBrands) filter.Brand = parsedBrands;
-
-//     const [products, total] = await Promise.all([
-//       Product.find(filter)
-//         .sort({ createdAt: -1 })
-//         .skip((page - 1) * limit)
-//         .limit(parseInt(limit))
-//         .lean()
-//         .populate('Category1')
-//         .populate('Category2')
-//         .populate('Category3')
-//         .populate('Brand'),
-//       Product.countDocuments(filter)
-//     ]);
-
-
-//     res.status(200).json({
-//       data: products,
-//       total,
-//       page: parseInt(page),
-//       limit: parseInt(limit)
-//     });
-//   } catch (error) {
-//     next(error);
-//   }
-// };
-
-// exports.getProductsCount = async (req, res, next) => {
-//   try {
-//     const count = await Product.countDocuments(); // or add a filter if needed
-
-//     res.status(200).json({ data: count });
-//   } catch (error) {
-//     console.error("Error fetching product count:", error);
-//     res.status(500).json({ message: "Something went wrong while counting products." });
-//   }
-// };
-
-// exports.getAdminProducts = async (req, res, next) => {
-//   try {
-//     const {
-//       page,
-//       limit,
-//       search,
-//       category1,
-//       category2,
-//       category3,
-//       brand
-//     } = req.query;
-
-
-//     console.log(req.query);
-
-//     const filter = {};
-
-//     if (search) {
-//       const isNumber = !isNaN(Number(search));
-//       filter.$or = [
-//         { Style: { $regex: search, $options: "i" } },
-//         { Description: { $regex: search, $options: "i" } },
-//         { Code: { $regex: search, $options: "i" } },
-//         ...(isNumber ? [{ ISPCCombined: Number(search) }] : [])
-//       ];
-//     }
-
-
-//     const toObjectIdArray = (param) => {
-//       if (!param) return undefined;
-
-//       // Already an array (e.g., ?category1=A&category1=B)
-//       if (Array.isArray(param)) {
-//         return { $in: param.map(id => new mongoose.Types.ObjectId(id)) };
-//       }
-
-//       // Try to parse JSON (e.g. '["A","B"]')
-//       try {
-//         const parsed = JSON.parse(param);
-//         if (Array.isArray(parsed)) {
-//           return { $in: parsed.map(id => new mongoose.Types.ObjectId(id)) };
-//         }
-//         return mongoose.Types.ObjectId(parsed); // single string
-//       } catch {
-//         // Fallback: comma-separated string
-//         const ids = param.split(',');
-//         return { $in: ids.map(id => new mongoose.Types.ObjectId(id)) };
-//       }
-//     };
-
-//     const parsedCategory1 = toObjectIdArray(category1);
-//     if (parsedCategory1) filter.Category1 = parsedCategory1;
-
-//     const parsedCategory2 = toObjectIdArray(category2);
-//     if (parsedCategory2) filter.Category2 = parsedCategory2;
-
-//     const parsedCategory3 = toObjectIdArray(category3);
-//     if (parsedCategory3) filter.Category3 = parsedCategory3;
-
-//     const parsedBrands = toObjectIdArray(brand);
-//     if (parsedBrands) filter.Brand = parsedBrands;
-
-//     const [products, total] = await Promise.all([
-//       Product.find(filter)
-//         .sort({ createdAt: -1 })
-//         .skip((page - 1) * limit)
-//         .limit(parseInt(limit))
-//         .lean()
-//         .populate('Category1')
-//         .populate('Category2')
-//         .populate('Category3')
-//         .populate('Brand'),
-//       Product.countDocuments(filter)
-//     ]);
-
-
-//     res.status(200).json({
-//       data: products,
-//       total,
-//       page: parseInt(page),
-//       limit: parseInt(limit)
-//     });
-//   } catch (error) {
-//     next(error);
-//   }
-// };
-
-// exports.updateVisibility = async (req, res, next) => {
-//   const { id } = req.params;
-//   const { isActive } = req.body;
-
-//   try {
-//     const product = await Product.findByIdAndUpdate(
-//       id,
-//       { isActive },
-//       { new: true }
-//     );
-
-//     if (!product) {
-//       return res.status(404).json({ message: "Product not found" });
-//     }
-
-//     res.status(200).json({ data: product, message: "Status updated successfully!" });
-//   } catch (error) {
-//     console.error("Update visibility error:", error);
-//     res.status(500).json({
-//       message: "Status update failed",
-//       error: error.message
-//     });
-//   }
-// };
-
-// exports.editProduct = async (req, res, next) => {
-//   try {
-//     const { id } = req.params;
-//     const {
-//       Code,
-//       Description,
-//       Pack,
-//       rrp,
-//       GrpSupplier,
-//       GrpSupplierCode,
-//       Manufacturer,
-//       ManufacturerCode,
-//       ISPCCombined,
-//       VATCode,
-//       Brand,
-//       ExtendedCharacterDesc,
-//       CatalogueCopy,
-//       ImageRef,
-//       Category1,
-//       Category2,
-//       Category3,
-//       Style,
-//     } = req.body;
-
-//     console.log("edit product ==> ", req.body);
-
-//     // Properly update the product
-//     const product = await Product.findByIdAndUpdate(
-//       id,
-//       {
-//         Code,
-//         Description,
-//         Pack,
-//         rrp,
-//         GrpSupplier,
-//         GrpSupplierCode,
-//         Manufacturer,
-//         ManufacturerCode,
-//         ISPCCombined,
-//         VATCode,
-//         Brand,
-//         ExtendedCharacterDesc,
-//         CatalogueCopy,
-//         ImageRef,
-//         Category1,
-//         Category2,
-//         Category3,
-//         Style,
-//       },
-//       { new: true } // return updated document
-//     );
-
-//     if (!product) {
-//       return res.status(404).json({ message: "Product not found" });
-//     }
-
-//     res.status(200).json({ message: "Product updated successfully", data: product });
-//   } catch (error) {
-//     console.error("Edit product error:", error);
-//     res.status(500).json({ message: "Failed to edit product", error: error.message });
-//   }
-// };
-
-// exports.deleteProduct = async (req, res, next) => {
-//   const { id } = req.params;
-
-//   try {
-//     const product = await Product.findByIdAndDelete(id);
-
-//     if (!product) {
-//       return res.status(404).json({ message: "Product not found" });
-//     }
-
-//     res.status(200).json({ data: product, message: "Product Deleted Successfully!" });
-//   } catch (error) {
-//     console.error("Product delete error:", error);
-//     res.status(500).json({
-//       message: "Product delete failed",
-//       error: error.message
-//     });
-//   }
-// };
-// exports.getSingleProduct = async (req, res, next) => {
-
-//   const { productId } = req.params;
-//   console.log("productId ==> ", productId);
-
-//   if (!productId) {
-//     return res.status(400).json({ error: "Missing productId" });
-//   }
-
-//   try {
-//     const product = await Product.findById({ _id: productId }).populate([
-//       { path: "Brand" },
-//       { path: "Category1" },
-//       { path: "Category2" },
-//       { path: "Category3" }
-//     ]);
-
-
-
-//     if (!product) {
-//       return res.status(404).json({ error: "product not found" });
-//     }
-
-
-//     return res.json({ data: product });
-//   } catch (error) {
-//     console.error("Error fetching product:", error);
-//     return res.status(500).json({ error: "Failed to fetch product" });
-//   }
-
-// }
-
-// exports.topSelling = async (req, res, next) => {
-//   try {
-//     const { id } = req.params;
-//     const { topSelling } = req.body;
-
-//     console.log(req.body)
-
-//     // Properly update the product
-//     const product = await Product.findByIdAndUpdate(
-//       id,
-//       {
-//         topSelling,
-//       },
-//       { new: true } // return updated document
-//     );
-
-//     if (!product) {
-//       return res.status(404).json({ message: "Product not found" });
-//     }
-
-//     res
-//       .status(200)
-//       .json({ message: "Product updated successfully", data: product });
-//   } catch (error) {
-//     console.error("Edit product error:", error);
-//     res
-//       .status(500)
-//       .json({ message: "Failed to edit product", error: error.message });
-//   }
-// };

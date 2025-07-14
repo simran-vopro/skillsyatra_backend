@@ -39,8 +39,8 @@ const mongoose_1 = __importStar(require("mongoose"));
 const OptionSchema = new mongoose_1.Schema({
     name: { type: String, required: true }
 });
-const QuizSchema = new mongoose_1.Schema({
-    question: { type: String, required: true, },
+const MCQSchema = new mongoose_1.Schema({
+    question: { type: String, required: true },
     options: {
         type: [OptionSchema],
         validate: {
@@ -48,7 +48,7 @@ const QuizSchema = new mongoose_1.Schema({
                 const names = arr.map(opt => opt.name);
                 return arr.length === 4 && new Set(names).size === 4;
             },
-            message: "Each quiz question must have exactly 4 unique options."
+            message: "Each MCQ must have exactly 4 unique options."
         }
     },
     answer: {
@@ -63,13 +63,30 @@ const QuizSchema = new mongoose_1.Schema({
         }
     }
 });
+const YesNoSchema = new mongoose_1.Schema({
+    question: { type: String, required: true },
+    answer: {
+        type: String,
+        enum: ["Yes", "No"],
+        required: true
+    }
+});
+const BlankSchema = new mongoose_1.Schema({
+    question: { type: String, required: true },
+    answer: { type: String, required: true }
+});
+const ActivitySchema = new mongoose_1.Schema({
+    mcq: [MCQSchema],
+    yesno: [YesNoSchema],
+    blank: [BlankSchema]
+});
 const ChapterSchema = new mongoose_1.Schema({
     title: { type: String, required: true },
     description: { type: String, required: true },
     video: String,
     audio: String,
     image: String,
-    quiz: [QuizSchema]
+    activities: [ActivitySchema]
 });
 const ModuleSchema = new mongoose_1.Schema({
     name: { type: String, required: true },
