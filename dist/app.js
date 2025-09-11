@@ -7,14 +7,15 @@ const express = require("express");
 const morgan = require("morgan");
 const cors = require("cors");
 const path = require("path");
+const app = express();
 const authRoutes = require('./routes/authRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const courseRoutes = require('./routes/courseRoutes');
 const instructorRoutes = require('./routes/instructorRoutes');
+const responseRoutes = require('./routes/responseRoutes');
 const errorHandler_1 = require("./middlewares/errorHandler");
 const dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config();
-const app = express();
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -28,6 +29,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/category', categoryRoutes);
 app.use('/api/course', courseRoutes);
 app.use('/api/instructor', instructorRoutes);
+app.use('/api/response', responseRoutes);
 // Serve frontend and admin builds
 const frontendPath = path.join(__dirname, '../frontend/dist');
 const adminPath = path.join(__dirname, '../admin/dist');

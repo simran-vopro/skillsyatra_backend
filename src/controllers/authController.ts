@@ -71,8 +71,6 @@ const login = async (req: Request, res: Response) => {
   try {
     const { phone, password, type } = req.body;
 
-    console.log(req.body);
-
     if (!phone || !password || !type) {
       return res.status(400).json({
         message: "Phone, password, and type are required",
@@ -80,7 +78,6 @@ const login = async (req: Request, res: Response) => {
     }
 
     const user = await User.findOne({ phone });
-    console.log("user ==> ", user);
 
     if (!user) {
       return res.status(401).json({ message: "Invalid credentials" });
@@ -93,9 +90,7 @@ const login = async (req: Request, res: Response) => {
     }
 
     if (type !== user.type) {
-      return res
-        .status(403)
-        .json({ message: `Access denied for user type: ${user.type}` });
+      return res.status(403).json({ message: `Access denied for user type: ${user.type}` });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -115,6 +110,7 @@ const login = async (req: Request, res: Response) => {
 
     // remove sensitive fields before sending user data back
     const sanitizedUser = {
+      _id: user._id,
       userId: user.userId,
       email: user.email,
       phone: user.phone,

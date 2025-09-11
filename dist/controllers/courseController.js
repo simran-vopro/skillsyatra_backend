@@ -46,12 +46,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
+const fs_1 = __importDefault(require("fs"));
+const path_1 = __importDefault(require("path"));
+const mongoose_1 = __importStar(require("mongoose"));
 const course_1 = require("../models/course");
 const Category_1 = require("../models/Category");
 const User_1 = require("../models/User");
-const mongoose_1 = __importStar(require("mongoose"));
-const fs_1 = __importDefault(require("fs"));
-const path_1 = __importDefault(require("path"));
 const sanitizeText = (str) => typeof str === "string" ? str.trim() : str;
 // Helper to get file by field name
 const getFileUrl = (files, fieldname) => {
@@ -67,9 +67,9 @@ const addcourse = (req, res, next) => __awaiter(void 0, void 0, void 0, function
         category = typeof category === 'string' ? JSON.parse(category) : category;
         // Extract thumbnail from uploaded files
         const thumbnailPath = getFileUrl(files, "thumbnail");
-        if (!thumbnailPath) {
-            return res.status(400).json({ message: "Thumbnail file is missing" });
-        }
+        // if (!thumbnailPath) {
+        //   return res.status(400).json({ message: "Thumbnail file is missing" });
+        // }
         // Check for existing course with same title
         const existing = yield course_1.Course.findOne({ title });
         if (existing) {
@@ -193,7 +193,53 @@ const getCourses = (req, res, next) => __awaiter(void 0, void 0, void 0, functio
                 foreignField: "_id",
                 as: "instructor"
             }
-        }, { $unwind: "$instructor" });
+        }, { $unwind: "$instructor" }, 
+        // ✅ Show most recent first
+        { $sort: { createdAt: -1 } });
+        const courses = yield course_1.Course.aggregate(pipeline);
+        return res.status(200).json({ data: courses });
+    }
+    catch (error) {
+        return res.status(500).json({ message: "error while getting courses" });
+    }
+});
+const getPublishedCourses = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { search } = req.query;
+        const matchStage = search
+            ? {
+                $match: {
+                    $or: [
+                        (0, mongoose_1.isValidObjectId)(search)
+                            ? { category: new mongoose_1.default.Types.ObjectId(typeof search === 'string' ? search : '') } // match by category ID
+                            : null,
+                        { title: { $regex: search, $options: "i" } },
+                        { description: { $regex: search, $options: "i" } }
+                    ].filter(Boolean),
+                    courseStatus: "published"
+                }
+            }
+            : null;
+        const pipeline = [];
+        if (matchStage)
+            pipeline.push(matchStage);
+        pipeline.push({
+            $lookup: {
+                from: "categories",
+                localField: "category",
+                foreignField: "_id",
+                as: "category"
+            }
+        }, { $unwind: "$category" }, {
+            $lookup: {
+                from: "users",
+                localField: "instructor",
+                foreignField: "_id",
+                as: "instructor"
+            }
+        }, { $unwind: "$instructor" }, 
+        // ✅ Show most recent first
+        { $sort: { createdAt: -1 } });
         const courses = yield course_1.Course.aggregate(pipeline);
         return res.status(200).json({ data: courses });
     }
@@ -436,8 +482,9 @@ const removeFile = (filePath) => {
 };
 const editCourse = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const courseId = req.params.id;
-    let { category, instructor, title, description, language, promoVideo, pricingType, pricing, whatYouLearn, courseInclude, audience, requirements, modules, } = req.body;
+    let { category, instructor, title, description, language, promoVideo, pricingType, pricing, whatYouLearn, courseInclude, audience, requirements, modules, courseStatus, certificate } = req.body;
     const files = req.files;
+    console.log("req.body ==> ", req.body);
     try {
         instructor = typeof instructor === 'string' ? JSON.parse(instructor) : instructor;
         category = typeof category === 'string' ? JSON.parse(category) : category;
@@ -493,6 +540,8 @@ const editCourse = (req, res, next) => __awaiter(void 0, void 0, void 0, functio
             instructor: instructorDoc._id,
             category: categoryDoc._id,
             thumbnail: newThumbnail || course.thumbnail,
+            courseStatus,
+            certificate
         };
         const updatedCourse = yield course_1.Course.findByIdAndUpdate(courseId, updatedData, {
             new: true,
@@ -513,6 +562,7 @@ const editCourse = (req, res, next) => __awaiter(void 0, void 0, void 0, functio
 exports.default = {
     addcourse,
     getCourses,
+    getPublishedCourses,
     deleteCourse,
     getCourse,
     updateVisisbility,

@@ -9,13 +9,14 @@ const courseController_1 = __importDefault(require("../controllers/courseControl
 const auth_1 = require("../middlewares/auth");
 const uploads_1 = __importDefault(require("../utils/uploads"));
 const courseAddValidator_1 = require("../utils/validators/courseAddValidator");
-router.get('/', courseController_1.default.getCourses);
+router.get('/', auth_1.authMiddleware, courseController_1.default.getCourses);
+router.get('/PublishedCourses', courseController_1.default.getPublishedCourses);
 router.get('/detail/:id', auth_1.authMiddleware, courseController_1.default.getCourse);
 router.get('/beforeDetail/:id', courseController_1.default.getBeforeCourseDetails);
 router.get('/myCourses', auth_1.authMiddleware, courseController_1.default.myCourses);
 router.get('/fullDetail/:id', auth_1.authMiddleware, courseController_1.default.getFullCourseDetails);
-router.post('/add', auth_1.authMiddleware, uploads_1.default.any(), courseAddValidator_1.courseAddValidator, courseAddValidator_1.validateAddCourse, courseController_1.default.addcourse);
+router.post('/add', auth_1.authMiddleware, uploads_1.default.any(), courseController_1.default.addcourse);
+router.put('/edit/:id', auth_1.authMiddleware, uploads_1.default.any(), courseAddValidator_1.courseAddValidator, courseAddValidator_1.validateAddCourse, courseController_1.default.editCourse);
 router.delete('/delete/:id', auth_1.authMiddleware, courseController_1.default.deleteCourse);
 router.put('/status/:id', auth_1.authMiddleware, courseController_1.default.updateVisisbility);
-router.put('/edit/:id', uploads_1.default.any(), courseController_1.default.editCourse);
 module.exports = router;

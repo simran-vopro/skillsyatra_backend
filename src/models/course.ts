@@ -59,16 +59,18 @@ export interface ICourse extends Document {
   requirements: string;
   modules: IModule[];
   status: boolean;
+  courseStatus: string;
+  certificate: boolean
 }
 
 // -------------------- Schemas --------------------
 
 const OptionSchema = new Schema<IOption>({
-  name: { type: String, required: true }
+  name: { type: String, }
 });
 
 const MCQSchema = new Schema<IMCQ>({
-  question: { type: String, required: true },
+  question: { type: String, },
   options: {
     type: [OptionSchema],
     validate: {
@@ -81,7 +83,7 @@ const MCQSchema = new Schema<IMCQ>({
   },
   answer: {
     type: String,
-    required: true,
+
     validate: {
       validator: function (val: string) {
         const opts = (this as any).options as IOption[];
@@ -93,17 +95,17 @@ const MCQSchema = new Schema<IMCQ>({
 });
 
 const YesNoSchema = new Schema<IYesNo>({
-  question: { type: String, required: true },
+  question: { type: String, },
   answer: {
     type: String,
     enum: ["Yes", "No"],
-    required: true
+
   }
 });
 
 const BlankSchema = new Schema<IBlank>({
-  question: { type: String, required: true },
-  answer: { type: String, required: true }
+  question: { type: String, },
+  answer: { type: String, }
 });
 
 const ActivitySchema = new Schema<IActivity>({
@@ -113,8 +115,8 @@ const ActivitySchema = new Schema<IActivity>({
 });
 
 const ChapterSchema = new Schema<IChapter>({
-  title: { type: String, required: true },
-  description: { type: String, required: true },
+  title: { type: String, },
+  description: { type: String, },
   video: String,
   audio: String,
   image: String,
@@ -122,10 +124,10 @@ const ChapterSchema = new Schema<IChapter>({
 });
 
 const ModuleSchema = new Schema<IModule>({
-  name: { type: String, required: true },
+  name: { type: String, },
   chapters: {
     type: [ChapterSchema],
-    required: true,
+
     validate: [
       {
         validator: function (arr: IChapter[]) {
@@ -144,24 +146,32 @@ const ModuleSchema = new Schema<IModule>({
   }
 });
 
+
+
 const CourseSchema = new Schema<ICourse>(
   {
-    category: { type: Schema.Types.ObjectId, ref: "Category", required: true },
-    instructor: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    createdBy: { type: String, enum: ["admin", "instructor"], required: true },
-    title: { type: String, required: true, unique: true },
-    description: { type: String, required: true },
-    language: { type: String, required: true },
-    thumbnail: { type: String, required: true },
+    category: { type: Schema.Types.ObjectId, ref: "Category", },
+    instructor: { type: Schema.Types.ObjectId, ref: "User", },
+    createdBy: { type: String, enum: ["admin", "instructor"], },
+    title: { type: String, unique: true },
+    description: { type: String, },
+    language: { type: String, },
+    thumbnail: { type: String, },
     promoVideo: { type: String },
-    pricingType: { type: String, enum: ["free", "paid"], required: true },
-    pricing: { type: Number, required: true },
+    pricingType: { type: String, enum: ["free", "paid"], },
+    pricing: { type: Number, },
     whatYouLearn: String,
     courseInclude: String,
     audience: String,
     requirements: String,
-    modules: { type: [ModuleSchema], required: true },
-    status: { type: Boolean, default: true }
+    modules: { type: [ModuleSchema], },
+    status: { type: Boolean, default: true },
+    certificate: { type: Boolean, default: true },
+    courseStatus: {
+      type: String,
+      enum: ['draft', 'published'],
+      default: 'draft',
+    },
   },
   { timestamps: true }
 );

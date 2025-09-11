@@ -37,10 +37,10 @@ exports.Course = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
 // -------------------- Schemas --------------------
 const OptionSchema = new mongoose_1.Schema({
-    name: { type: String, required: true }
+    name: { type: String, }
 });
 const MCQSchema = new mongoose_1.Schema({
-    question: { type: String, required: true },
+    question: { type: String, },
     options: {
         type: [OptionSchema],
         validate: {
@@ -53,7 +53,6 @@ const MCQSchema = new mongoose_1.Schema({
     },
     answer: {
         type: String,
-        required: true,
         validate: {
             validator: function (val) {
                 const opts = this.options;
@@ -64,16 +63,15 @@ const MCQSchema = new mongoose_1.Schema({
     }
 });
 const YesNoSchema = new mongoose_1.Schema({
-    question: { type: String, required: true },
+    question: { type: String, },
     answer: {
         type: String,
         enum: ["Yes", "No"],
-        required: true
     }
 });
 const BlankSchema = new mongoose_1.Schema({
-    question: { type: String, required: true },
-    answer: { type: String, required: true }
+    question: { type: String, },
+    answer: { type: String, }
 });
 const ActivitySchema = new mongoose_1.Schema({
     mcq: [MCQSchema],
@@ -81,18 +79,17 @@ const ActivitySchema = new mongoose_1.Schema({
     blank: [BlankSchema]
 });
 const ChapterSchema = new mongoose_1.Schema({
-    title: { type: String, required: true },
-    description: { type: String, required: true },
+    title: { type: String, },
+    description: { type: String, },
     video: String,
     audio: String,
     image: String,
     activities: [ActivitySchema]
 });
 const ModuleSchema = new mongoose_1.Schema({
-    name: { type: String, required: true },
+    name: { type: String, },
     chapters: {
         type: [ChapterSchema],
-        required: true,
         validate: [
             {
                 validator: function (arr) {
@@ -111,21 +108,27 @@ const ModuleSchema = new mongoose_1.Schema({
     }
 });
 const CourseSchema = new mongoose_1.Schema({
-    category: { type: mongoose_1.Schema.Types.ObjectId, ref: "Category", required: true },
-    instructor: { type: mongoose_1.Schema.Types.ObjectId, ref: "User", required: true },
-    createdBy: { type: String, enum: ["admin", "instructor"], required: true },
-    title: { type: String, required: true, unique: true },
-    description: { type: String, required: true },
-    language: { type: String, required: true },
-    thumbnail: { type: String, required: true },
+    category: { type: mongoose_1.Schema.Types.ObjectId, ref: "Category", },
+    instructor: { type: mongoose_1.Schema.Types.ObjectId, ref: "User", },
+    createdBy: { type: String, enum: ["admin", "instructor"], },
+    title: { type: String, unique: true },
+    description: { type: String, },
+    language: { type: String, },
+    thumbnail: { type: String, },
     promoVideo: { type: String },
-    pricingType: { type: String, enum: ["free", "paid"], required: true },
-    pricing: { type: Number, required: true },
+    pricingType: { type: String, enum: ["free", "paid"], },
+    pricing: { type: Number, },
     whatYouLearn: String,
     courseInclude: String,
     audience: String,
     requirements: String,
-    modules: { type: [ModuleSchema], required: true },
-    status: { type: Boolean, default: true }
+    modules: { type: [ModuleSchema], },
+    status: { type: Boolean, default: true },
+    certificate: { type: Boolean, default: true },
+    courseStatus: {
+        type: String,
+        enum: ['draft', 'published'],
+        default: 'draft',
+    },
 }, { timestamps: true });
 exports.Course = mongoose_1.default.model("Course", CourseSchema);

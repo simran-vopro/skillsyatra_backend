@@ -61,14 +61,12 @@ const signUp = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { phone, password, type } = req.body;
-        console.log(req.body);
         if (!phone || !password || !type) {
             return res.status(400).json({
                 message: "Phone, password, and type are required",
             });
         }
         const user = yield User_1.User.findOne({ phone });
-        console.log("user ==> ", user);
         if (!user) {
             return res.status(401).json({ message: "Invalid credentials" });
         }
@@ -78,9 +76,7 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             });
         }
         if (type !== user.type) {
-            return res
-                .status(403)
-                .json({ message: `Access denied for user type: ${user.type}` });
+            return res.status(403).json({ message: `Access denied for user type: ${user.type}` });
         }
         const isMatch = yield bcrypt.compare(password, user.password);
         if (!isMatch) {
@@ -93,6 +89,7 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         }, JWT_SECRET, { expiresIn: "7d" });
         // remove sensitive fields before sending user data back
         const sanitizedUser = {
+            _id: user._id,
             userId: user.userId,
             email: user.email,
             phone: user.phone,

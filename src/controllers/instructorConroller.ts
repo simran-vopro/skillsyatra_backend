@@ -3,7 +3,6 @@ import bcrypt from 'bcryptjs';
 import { User } from "../models/User";
 const { validationResult } = require("express-validator");
 
-
 const getAllInstructors = async (req: Request, res: Response) => {
     try {
 

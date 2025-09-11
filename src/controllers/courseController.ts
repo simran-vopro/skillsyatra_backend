@@ -1,13 +1,12 @@
-import { Request, Response, NextFunction } from "express";
 import bcrypt from 'bcryptjs';
+import fs from "fs";
+import path from "path";
+import { Request, Response, NextFunction } from "express";
+import mongoose, { isValidObjectId } from "mongoose";
 
 import { Course } from "../models/course";
 import { Category } from "../models/Category";
 import { User } from "../models/User";
-import mongoose, { isValidObjectId } from "mongoose";
-
-import fs from "fs";
-import path from "path";
 
 const sanitizeText = (str: string) => typeof str === "string" ? str.trim() : str;
 
@@ -45,9 +44,9 @@ const addcourse = async (req: Request, res: Response, next: NextFunction) => {
     // Extract thumbnail from uploaded files
     const thumbnailPath = getFileUrl(files, "thumbnail");
 
-    if (!thumbnailPath) {
-      return res.status(400).json({ message: "Thumbnail file is missing" });
-    }
+    // if (!thumbnailPath) {
+    //   return res.status(400).json({ message: "Thumbnail file is missing" });
+    // }
 
     // Check for existing course with same title
     const existing = await Course.findOne({ title });
@@ -57,6 +56,7 @@ const addcourse = async (req: Request, res: Response, next: NextFunction) => {
 
     // Handle category (create or fetch existing)
     let finalCategory;
+
     if (category && !category?._id) {
       const isCategoryExist = await Category.findOne({ name: category?.name });
       if (isCategoryExist) {
@@ -186,7 +186,63 @@ const getCourses = async (req: Request, res: Response, next: NextFunction) => {
           as: "instructor"
         }
       },
-      { $unwind: "$instructor" }
+      { $unwind: "$instructor" },
+      // ✅ Show most recent first
+      { $sort: { createdAt: -1 } }
+    );
+
+    const courses = await Course.aggregate(pipeline);
+
+    return res.status(200).json({ data: courses });
+  } catch (error: any) {
+    return res.status(500).json({ message: "error while getting courses" });
+  }
+};
+
+const getPublishedCourses = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { search } = req.query;
+
+    const matchStage = search
+      ? {
+        $match: {
+          $or: [
+            isValidObjectId(search)
+              ? { category: new mongoose.Types.ObjectId(typeof search === 'string' ? search : '') } // match by category ID
+              : null,
+            { title: { $regex: search, $options: "i" } },
+            { description: { $regex: search, $options: "i" } }
+          ].filter(Boolean),
+          courseStatus : "published"
+        }
+      }
+      : null;
+
+    const pipeline: any[] = [];
+
+    if (matchStage) pipeline.push(matchStage);
+
+    pipeline.push(
+      {
+        $lookup: {
+          from: "categories",
+          localField: "category",
+          foreignField: "_id",
+          as: "category"
+        }
+      },
+      { $unwind: "$category" },
+      {
+        $lookup: {
+          from: "users",
+          localField: "instructor",
+          foreignField: "_id",
+          as: "instructor"
+        }
+      },
+      { $unwind: "$instructor" },
+      // ✅ Show most recent first
+      { $sort: { createdAt: -1 } }
     );
 
     const courses = await Course.aggregate(pipeline);
@@ -305,7 +361,6 @@ const getCourse = async (req: Request, res: Response, next: NextFunction) => {
   }
 };
 
-
 // get course details by id
 const getBeforeCourseDetails = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -389,7 +444,6 @@ const getBeforeCourseDetails = async (req: Request, res: Response, next: NextFun
     next(error);
   }
 };
-
 
 // get course details by id
 const getFullCourseDetails = async (req: Request, res: Response, next: NextFunction) => {
@@ -476,9 +530,13 @@ const editCourse = async (req: Request, res: Response, next: NextFunction) => {
     audience,
     requirements,
     modules,
+    courseStatus,
+    certificate
   } = req.body;
 
   const files = req.files as Express.Multer.File[];
+
+  console.log("req.body ==> ", req.body);
 
   try {
     instructor = typeof instructor === 'string' ? JSON.parse(instructor) : instructor;
@@ -541,6 +599,8 @@ const editCourse = async (req: Request, res: Response, next: NextFunction) => {
       instructor: instructorDoc._id,
       category: categoryDoc._id,
       thumbnail: newThumbnail || course.thumbnail,
+      courseStatus,
+      certificate
     };
 
     const updatedCourse = await Course.findByIdAndUpdate(courseId, updatedData, {
@@ -563,6 +623,7 @@ const editCourse = async (req: Request, res: Response, next: NextFunction) => {
 export default {
   addcourse,
   getCourses,
+  getPublishedCourses,
   deleteCourse,
   getCourse,
   updateVisisbility,
