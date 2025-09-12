@@ -71,13 +71,16 @@ const login = async (req: Request, res: Response) => {
   try {
     const { phone, password, type } = req.body;
 
+    console.log("Login attempt:", { phone, type });
+
     if (!phone || !password || !type) {
       return res.status(400).json({
         message: "Phone, password, and type are required",
       });
     }
 
-    const user = await User.findOne({ phone });
+    const user = await User.findOne({ phone, type });
+    console.log("Found user:", user);
 
     if (!user) {
       return res.status(401).json({ message: "Invalid credentials" });

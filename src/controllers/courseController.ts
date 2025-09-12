@@ -150,6 +150,8 @@ const getCourses = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { search } = req.query;
 
+
+
     const matchStage = search
       ? {
         $match: {

@@ -14,7 +14,7 @@ const generateUserId = (type) => __awaiter(void 0, void 0, void 0, function* () 
     const prefixMap = {
         admin: "ADM",
         user: "U",
-        agent: "AGT",
+        instructor: "AGT",
         guest: "GST",
     };
     const prefix = prefixMap[type];

@@ -19,6 +19,6 @@ router.delete('/:id/delete', auth, orderController.deleteOrder);
 //graphs 
 router.get('/compare-orders', auth, orderController.getOrderStatsComparison);
 router.get('/monthly-profits', auth, orderController.getMonthlyProfits);
-router.get("/agent-monthly-profits", auth, orderController.getAgentMonthlyProfits);
+router.get("/instructor-monthly-profits", auth, orderController.getAgentMonthlyProfits);
 
 module.exports = router;

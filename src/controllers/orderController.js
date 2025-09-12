@@ -59,11 +59,11 @@ exports.requestQuote = async (req, res) => {
 
   try {
     if (agentId) {
-      const agent = await User.findOne({ userId: agentId });
-      if (!agent)
+      const instructor = await User.findOne({ userId: agentId });
+      if (!instructor)
         return res
           .status(404)
-          .json({ message: "Agent not found with your given agent id" });
+          .json({ message: "Agent not found with your given instructor id" });
     }
 
     const cart = await Cart.findOne({ userId }).populate("items.product");
@@ -319,10 +319,10 @@ exports.createOrderByAdmin = async (req, res) => {
       return res.status(400).json({ message: errors.array()[0].msg }); // send only the first error message
     }
 
-    // Optional: Validate agent exists
+    // Optional: Validate instructor exists
     if (agentId) {
-      const agent = await User.findOne({ userId: agentId });
-      if (!agent) return res.status(404).json({ message: "Agent not found" });
+      const instructor = await User.findOne({ userId: agentId });
+      if (!instructor) return res.status(404).json({ message: "Agent not found" });
     }
 
     // Determine customer userId
@@ -552,7 +552,7 @@ exports.getOrders = async (req, res) => {
       query.userId = userId;
     }
 
-    if (user.type === "agent") {
+    if (user.type === "instructor") {
       query.agentId = userId;
     }
 
@@ -704,11 +704,11 @@ exports.confirm_Order = async (req, res) => {
     });
 
     if (existingOrder.agentId) {
-      const agent = await User.findOne({ userId: existingOrder.agentId });
-      if (agent && agent.email) {
+      const instructor = await User.findOne({ userId: existingOrder.agentId });
+      if (instructor && instructor.email) {
         await transporter.sendMail({
           from: process.env.SMTP_FROM_EMAIL,
-          to: agent.email,
+          to: instructor.email,
           subject: `Order Confirmed - ${updatedOrder.orderId}`,
           html: adminMailHtml,
         });
@@ -824,7 +824,7 @@ exports.getOrderStatsComparison = async (req, res) => {
       },
     };
 
-    if (user.type === "agent") {
+    if (user.type === "instructor") {
       baseFilter.agentId = user.userId;
       previousFilter.agentId = user.userId;
     }
@@ -839,7 +839,7 @@ exports.getOrderStatsComparison = async (req, res) => {
       },
     };
 
-    if (user.type === "agent") {
+    if (user.type === "instructor") {
       todayFilter.agentId = user.userId;
     }
 
@@ -850,7 +850,7 @@ exports.getOrderStatsComparison = async (req, res) => {
     // Totals for all time
     let totalOrders, allCompletedOrders, allPendingOrders;
 
-    if (user.type === "agent") {
+    if (user.type === "instructor") {
       totalOrders = await Order.countDocuments({ agentId: user.userId });
       allCompletedOrders = await Order.countDocuments({
         status: "Delivered",
@@ -905,7 +905,7 @@ exports.getMonthlyProfits = async (req, res) => {
 
     let orders = [];
 
-    if (user.type === "agent") {
+    if (user.type === "instructor") {
       // Agent: only their own orders
       orders = await Order.find({
         status: "Delivered",
@@ -950,14 +950,14 @@ exports.getAgentMonthlyProfits = async (req, res) => {
     const year = parseInt(req.query.year);
     if (!year) return res.status(400).json({ message: "Year is required" });
 
-    // This will store monthly profits for each agent
+    // This will store monthly profits for each instructor
     const agentProfitsMap = {}; // { agentId: [Jan, Feb, ..., Dec] }
 
     // Common date range
     const startOfYear = moment().year(year).startOf("year").toDate();
     const endOfYear = moment().year(year).endOf("year").toDate();
 
-    if (user.type === "agent") {
+    if (user.type === "instructor") {
       // Agents see only their own profits
       const orders = await Order.find({
         status: "Delivered",
@@ -1001,21 +1001,21 @@ exports.getAgentMonthlyProfits = async (req, res) => {
       }
     }
 
-    // Now get agent names
+    // Now get instructor names
     const agentIds = Object.keys(agentProfitsMap);
     const agentUsers = await User.find(
       { userId: { $in: agentIds } },
       "firstName lastName userId"
     );
 
-    const result = agentUsers.map((agent) => ({
-      name: `${agent.firstName} ${agent.lastName}`,
-      data: agentProfitsMap[agent.userId],
+    const result = agentUsers.map((instructor) => ({
+      name: `${instructor.firstName} ${instructor.lastName}`,
+      data: agentProfitsMap[instructor.userId],
     }));
 
     res.json(result);
   } catch (err) {
-    console.error("Error fetching agent monthly profits:", err);
+    console.error("Error fetching instructor monthly profits:", err);
     res.status(500).json({ message: "Server error" });
   }
 };

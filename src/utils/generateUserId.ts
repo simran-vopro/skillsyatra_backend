@@ -1,12 +1,12 @@
 import { User, IUser } from "../models/User";
 
-type UserType = "admin" | "user" | "agent" | "guest";
+type UserType = "admin" | "user" | "instructor" | "guest";
 
 const generateUserId = async (type: UserType): Promise<string> => {
   const prefixMap: Record<UserType, string> = {
     admin: "ADM",
     user: "U",
-    agent: "AGT",
+    instructor: "AGT",
     guest: "GST",
   };
 

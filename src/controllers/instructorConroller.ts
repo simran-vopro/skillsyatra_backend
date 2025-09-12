@@ -48,9 +48,9 @@ const createInstructor = async (req: Request, res: Response) => {
     try {
         const { email, phone, firstName, lastName, password, address } = req.body;
 
-        const userId = function generateUniqueUserId(): string {
-            return 'INS' + Date.now(); // or any smarter logic you use elsewhere
-        }
+        const userId = (function generateUniqueUserId() {
+            return 'INS' + Date.now();
+        })();
 
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
