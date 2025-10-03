@@ -61,12 +61,14 @@ const signUp = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { phone, password, type } = req.body;
+        console.log("Login attempt:", { phone, type });
         if (!phone || !password || !type) {
             return res.status(400).json({
                 message: "Phone, password, and type are required",
             });
         }
-        const user = yield User_1.User.findOne({ phone });
+        const user = yield User_1.User.findOne({ phone, type });
+        console.log("Found user:", user);
         if (!user) {
             return res.status(401).json({ message: "Invalid credentials" });
         }

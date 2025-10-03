@@ -53,9 +53,9 @@ const getAllInstructors = (req, res) => __awaiter(void 0, void 0, void 0, functi
 const createInstructor = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { email, phone, firstName, lastName, password, address } = req.body;
-        const userId = function generateUniqueUserId() {
-            return 'INS' + Date.now(); // or any smarter logic you use elsewhere
-        };
+        const userId = (function generateUniqueUserId() {
+            return 'INS' + Date.now();
+        })();
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             return res.status(400).json({ message: errors.array()[0].msg });
